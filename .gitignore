@@ -1,0 +1,10 @@
+node_modules/
+out/
+dist/
+data/
+.e2e-demo/
+.e2e-config.json
+.smoke*.png
+*.log
+Thumbs.db
+.DS_Store
