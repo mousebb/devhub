@@ -16,7 +16,7 @@ _（截图使用演示数据：同属 `dpv-shop` 分组的前后端被合并成�
 
 ![项目详情](docs/screenshot-detail.png)
 
-**设置**：运行方式、端口检测、日志上限、托盘，以及只读的环境与可用工具清单。配置与日志都放在 DevHub 自己的 `data/` 目录里。
+**设置**：语言、运行方式、端口检测、日志上限、托盘，以及只读的环境与可用工具清单。配置与日志都放在 DevHub 自己的 `data/` 目录里。
 
 ![设置](docs/screenshot-settings.png)
 
@@ -115,6 +115,8 @@ node scripts/smoke-test.mjs   # 不启动界面，直接验证：启动命令 / 
 - **技术栈图标**：按项目类型显示对应品牌图标（Node.js / Python / Flutter / Go / Rust /
   .NET / Java / PHP / 静态站点），识别不出时回退到自定义 emoji
 - 搜索（名称 / 目录 / 服务 / 命令 / 标签）、排序、收藏、最近启动、标签筛选
+- **界面语言**：简体中文 / English，在**设置 → 语言**里切换。选择会写进 `config.json` 长期保留，
+  且全局生效 —— 窗口界面、托盘菜单、弹窗，以及 DevHub 写进日志的系统行（如「进程退出」「已恢复会话」）
 
 ### 分组与一键启停
 
@@ -175,14 +177,14 @@ devhub/
 │   │   ├── system.ts           # 端口检测 / where / 打开 VS Code 等
 │   │   └── icon.ts             # 运行时生成托盘 / 窗口图标
 │   ├── preload/index.ts        # contextBridge 暴露 DevHubApi
-│   └── shared/                 # 类型 + IPC 通道定义（主/渲染共用）
+│   └── shared/                 # 类型 + IPC 通道定义 + i18n 词典（zh/en，主/渲染共用）
 ├── src/                        # React 渲染层
 │   ├── components/             # Sidebar(可折叠树) / GroupCard / ProjectCard / ServiceRow /
 │   │                           # ProjectDetail / LogViewer / ProjectEditor / AddProjectWizard /
 │   │                           # StackIcon(技术栈图标) / SettingsPage
-│   ├── lib/                    # api / store(全局状态) / format
+│   ├── lib/                    # api / store(全局状态) / format / i18n hook
 │   └── App.tsx
-├── docs/                       # README 用界面截图
+├── docs/                       # README 用界面截图（中英各一套）
 └── scripts/                    # start.mjs 启动器 / smoke-test.mjs 核心行为自检
 ```
 

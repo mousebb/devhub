@@ -3,6 +3,7 @@ import { ArrowDownToLine, ClipboardCopy, Eraser, FolderOpen, Save, Search } from
 import type { LogLine, ProjectConfig } from '@shared/types'
 import { keyOf } from '../lib/api'
 import { useStore } from '../lib/store'
+import { useT } from '../lib/i18n'
 import { formatTime } from '../lib/format'
 import { Button, IconButton, Input } from './ui'
 
@@ -14,6 +15,7 @@ interface Props {
 
 export function LogViewer({ project, serviceId }: Props) {
   const { logs, clearLogs, toast } = useStore()
+  const { t } = useT()
   const [filter, setFilter] = useState('')
   const [autoScroll, setAutoScroll] = useState(true)
   const [wrap, setWrap] = useState(false)
@@ -39,7 +41,7 @@ export function LogViewer({ project, serviceId }: Props) {
   const copyAll = async () => {
     const text = lines.map((l) => `[${formatTime(l.ts)}] ${l.text}`).join('\n')
     await navigator.clipboard.writeText(text)
-    toast('success', `已复制 ${lines.length} 行日志`)
+    toast('success', t('log.copied', { n: lines.length }))
   }
 
   return (
@@ -49,26 +51,26 @@ export function LogViewer({ project, serviceId }: Props) {
           <Search size={13} className="absolute left-2 top-2 text-subtle" />
           <Input
             className="!py-1 !pl-7"
-            placeholder="过滤日志…"
+            placeholder={t('log.filterPlaceholder')}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
         <label className="flex items-center gap-1 text-[12px] text-subtle">
           <input type="checkbox" checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} />
-          自动滚动
+          {t('log.autoScroll')}
         </label>
         <label className="flex items-center gap-1 text-[12px] text-subtle">
           <input type="checkbox" checked={wrap} onChange={(e) => setWrap(e.target.checked)} />
-          自动换行
+          {t('log.wrap')}
         </label>
-        <span className="text-[11px] text-subtle">{lines.length} 行</span>
+        <span className="text-[11px] text-subtle">{t('log.lines', { n: lines.length })}</span>
         <span className="flex-1" />
-        <IconButton title="复制" onClick={() => void copyAll()}>
+        <IconButton title={t('act.copy')} onClick={() => void copyAll()}>
           <ClipboardCopy size={14} />
         </IconButton>
         <IconButton
-          title="保存为文件"
+          title={t('log.saveFile')}
           onClick={async () => {
             if (!targetServiceId) return
             await window.devhub.saveLogs(project.id, targetServiceId)
@@ -77,7 +79,7 @@ export function LogViewer({ project, serviceId }: Props) {
           <Save size={14} />
         </IconButton>
         <IconButton
-          title="打开日志目录"
+          title={t('log.openFolder')}
           onClick={() => {
             if (targetServiceId) void window.devhub.openLogFolder(project.id, targetServiceId)
           }}
@@ -85,7 +87,7 @@ export function LogViewer({ project, serviceId }: Props) {
           <FolderOpen size={14} />
         </IconButton>
         <IconButton
-          title="清空"
+          title={t('log.clear')}
           onClick={() => {
             if (serviceId === 'all') {
               for (const s of project.services) void clearLogs(project.id, s.id)
@@ -100,7 +102,7 @@ export function LogViewer({ project, serviceId }: Props) {
 
       <div ref={containerRef} className="min-h-0 flex-1 select-text overflow-auto bg-canvas px-3 py-2">
         {lines.length === 0 ? (
-          <div className="py-8 text-center text-[12px] text-subtle">暂无日志</div>
+          <div className="py-8 text-center text-[12px] text-subtle">{t('log.empty')}</div>
         ) : (
           lines.map((line) => (
             <div key={line.id} className={`log-line ${wrap ? '' : 'whitespace-pre'}`}>
@@ -134,7 +136,7 @@ export function LogViewer({ project, serviceId }: Props) {
             if (el) el.scrollTop = el.scrollHeight
           }}
         >
-          <ArrowDownToLine size={13} /> 回到底部
+          <ArrowDownToLine size={13} /> {t('log.backToBottom')}
         </Button>
       )}
     </div>

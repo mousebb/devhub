@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PackageOpen, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { StoreProvider, useStore } from './lib/store'
+import { useT } from './lib/i18n'
 import type { ProjectConfig } from '@shared/types'
 import { Sidebar, type View } from './components/Sidebar'
 import { ProjectCard } from './components/ProjectCard'
@@ -18,6 +19,7 @@ const SIDEBAR_KEY = 'devhub.sidebarCollapsed'
 
 function Shell() {
   const { config, runtime, ready } = useStore()
+  const { t } = useT()
   const [view, setView] = useState<View>({ kind: 'all' })
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortMode>('name')
@@ -88,11 +90,11 @@ function Shell() {
 
   const viewTitle =
     view.kind === 'all'
-      ? '全部项目'
+      ? t('app.allProjects')
       : view.kind === 'favorites'
-        ? '收藏'
+        ? t('app.favorites')
         : view.kind === 'recent'
-          ? '最近启动'
+          ? t('app.recent')
           : view.value!
 
   return (
@@ -134,12 +136,12 @@ function Shell() {
           <>
             <header className="flex items-center gap-3 border-b border-line px-6 py-3">
               <h1 className="text-[16px] font-semibold text-ink">{viewTitle}</h1>
-              <span className="text-[12px] text-subtle">{projects.length} 个项目</span>
+              <span className="text-[12px] text-subtle">{t('app.projectsCount', { n: projects.length })}</span>
               <div className="relative w-72">
                 <Search size={14} className="absolute left-2.5 top-2 text-subtle" />
                 <Input
                   className="!py-1 !pl-8"
-                  placeholder="搜索项目 / 目录 / 服务 / 标签…"
+                  placeholder={t('list.searchPlaceholder')}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -148,28 +150,24 @@ function Shell() {
               <div className="flex items-center gap-1 text-[12px] text-subtle">
                 <SlidersHorizontal size={13} />
                 <Select value={sort} onChange={(e) => setSort(e.target.value as SortMode)}>
-                  <option value="name">按名称</option>
-                  <option value="recent">按最近启动</option>
-                  <option value="created">按创建时间</option>
+                  <option value="name">{t('list.sortName')}</option>
+                  <option value="recent">{t('list.sortRecent')}</option>
+                  <option value="created">{t('list.sortCreated')}</option>
                 </Select>
               </div>
               <Button variant="primary" onClick={() => setWizardOpen(true)}>
-                <Plus size={14} /> 添加项目
+                <Plus size={14} /> {t('list.addProject')}
               </Button>
             </header>
 
             <main className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               {!ready ? (
-                <div className="py-16 text-center text-[13px] text-subtle">加载中…</div>
+                <div className="py-16 text-center text-[13px] text-subtle">{t('list.loading')}</div>
               ) : projects.length === 0 ? (
                 <EmptyState
                   icon={<PackageOpen size={28} />}
-                  title={config.projects.length ? '没有匹配的项目' : '还没有项目'}
-                  hint={
-                    config.projects.length
-                      ? '换个关键词试试'
-                      : '点击「添加项目」，选择一个目录，DevHub 会自动识别 package.json / pubspec.yaml / requirements.txt 并生成启动命令。'
-                  }
+                  title={config.projects.length ? t('list.emptyMatchTitle') : t('list.emptyTitle')}
+                  hint={config.projects.length ? t('list.emptyMatchHint') : t('list.emptyHint')}
                 />
               ) : (
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">

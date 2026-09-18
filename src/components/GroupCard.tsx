@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight, Layers, Play, Square } from 'lucide-react'
 import type { ProjectConfig } from '@shared/types'
 import { useStore } from '../lib/store'
+import { useT } from '../lib/i18n'
 import { keyOf } from '../lib/api'
 import { useNow } from '../lib/useNow'
 import { Button } from './ui'
@@ -17,6 +18,7 @@ interface Props {
 
 export function GroupCard({ groupName, members, onOpenProject }: Props) {
   const { runtime, startGroup, stopGroup, startService, stopService } = useStore()
+  const { t } = useT()
   const now = useNow()
   const [expanded, setExpanded] = useState(true)
 
@@ -45,18 +47,18 @@ export function GroupCard({ groupName, members, onOpenProject }: Props) {
           <span className="min-w-0">
             <span className="block truncate text-[15px] font-semibold text-ink">{groupName}</span>
             <span className="block text-[11px] text-subtle">
-              {members.length} 个项目 · {enabledCount} 个服务
+              {t('card.groupSubtitle', { p: members.length, s: enabledCount })}
             </span>
           </span>
         </button>
         <div className="flex flex-wrap items-center justify-end gap-1">
           {allRunning ? (
             <Button variant="danger" onClick={() => void stopGroup(groupName)}>
-              <Square size={12} /> 停止
+              <Square size={12} /> {t('act.stop')}
             </Button>
           ) : (
             <Button variant="success" onClick={() => void startGroup(groupName)}>
-              <Play size={12} /> 启动
+              <Play size={12} /> {t('act.start')}
             </Button>
           )}
         </div>
@@ -79,7 +81,9 @@ export function GroupCard({ groupName, members, onOpenProject }: Props) {
                   <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">
                     {member.name}
                   </span>
-                  <span className="text-[11px] text-subtle">{member.services.length} 个服务</span>
+                  <span className="text-[11px] text-subtle">
+                    {t('card.servicesCount', { n: member.services.length })}
+                  </span>
                 </button>
                 <div className="mt-1 space-y-1">
                   {member.services.map((service) => (

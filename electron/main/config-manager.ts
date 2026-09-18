@@ -1,6 +1,7 @@
 import { cpSync, copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { app } from 'electron'
+import { normalizeLang } from '@shared/i18n'
 import {
   AppConfig,
   CONFIG_VERSION,
@@ -118,6 +119,8 @@ export class ConfigManager {
   private normalize(raw: unknown): AppConfig {
     const input = (raw ?? {}) as Partial<AppConfig>
     const settings = { ...createDefaultSettings(), ...(input.settings ?? {}) }
+    // 语言/运行方式等枚举字段可能被手改成非法值，统一收敛回合法值
+    settings.language = normalizeLang(settings.language)
     const projects = Array.isArray(input.projects) ? input.projects.map(normalizeProject) : []
     return { version: CONFIG_VERSION, settings, projects }
   }

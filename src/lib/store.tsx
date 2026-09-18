@@ -9,6 +9,7 @@ import {
   type ReactNode
 } from 'react'
 import { api, keyOf } from './api'
+import { normalizeLang, translate, type MsgKey, type MsgParams } from '@shared/i18n'
 import type { AppConfig, AppSettings, LogLine, ProjectConfig, ServiceConfig, ServiceRuntime } from '@shared/types'
 
 const MAX_LOGS = 4000
@@ -70,6 +71,7 @@ export function useStore(): StoreValue {
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<AppConfig>({ version: 1, projects: [], settings: {
     theme: 'dark',
+    language: 'zh',
     confirmBeforeStopAll: true,
     checkPorts: true,
     maxLogLines: 3000,
@@ -92,6 +94,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => [...prev, { id, level, message }])
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4500)
   }, [])
+
+  /** 提示 / 确认框文案也要跟随界面语言（这里不用 useT，避免与 store 循环依赖） */
+  const lang = normalizeLang(config.settings.language)
+  const t = useCallback(
+    (key: MsgKey, params?: MsgParams) => translate(lang, key, params),
+    [lang]
+  )
 
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
@@ -135,12 +144,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (r.status === 'error' && r.error) {
         const project = configRef.current.projects.find((p) => p.id === r.projectId)
         const service = project?.services.find((s) => s.id === r.serviceId)
-        toast('error', `${service?.name ?? '服务'} 启动失败：${r.error}`)
+        toast('error', t('msg.startFailed', { name: service?.name ?? t('msg.service'), error: r.error }))
       }
       if (r.status === 'exited') {
         const project = configRef.current.projects.find((p) => p.id === r.projectId)
         const service = project?.services.find((s) => s.id === r.serviceId)
-        toast('warn', `${service?.name ?? '服务'} 已退出（exit code ${r.exitCode ?? '?'}）`)
+        toast('warn', t('msg.exited', { name: service?.name ?? t('msg.service'), code: r.exitCode ?? '?' }))
       }
     })
     const offCleared = api.onLogsCleared(({ projectId, serviceId }) => {
@@ -153,7 +162,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       offCleared()
       offConfig()
     }
-  }, [toast])
+  }, [toast, t])
 
   /* theme */
   useEffect(() => {
@@ -168,31 +177,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const exists = configRef.current.projects.some((p) => p.id === project.id)
     const next = exists ? await api.updateProject(project) : await api.createProject(project)
     setConfig(next)
-    toast('success', `已保存项目「${project.name}」`)
-  }, [toast])
+    toast('success', t('msg.savedProject', { name: project.name }))
+  }, [toast, t])
 
   const deleteProject = useCallback(
     async (id: string) => {
       const project = configRef.current.projects.find((p) => p.id === id)
       const ok = await confirm({
-        title: '删除项目',
-        message: `确定删除「${project?.name ?? ''}」吗？正在运行的服务会被停止，此操作不可撤销。`,
-        confirmText: '删除',
+        title: t('msg.deleteTitle'),
+        message: t('msg.deleteMessage', { name: project?.name ?? '' }),
+        confirmText: t('act.delete'),
         danger: true
       })
       if (!ok) return
       setConfig(await api.deleteProject(id))
-      toast('info', `已删除「${project?.name ?? ''}」`)
+      toast('info', t('msg.deleted', { name: project?.name ?? '' }))
     },
-    [confirm, toast]
+    [confirm, toast, t]
   )
 
   const duplicateProject = useCallback(
     async (id: string) => {
       setConfig(await api.duplicateProject(id))
-      toast('success', '已复制项目')
+      toast('success', t('msg.duplicated'))
     },
-    [toast]
+    [toast, t]
   )
 
   const updateSettings = useCallback(async (patch: Partial<AppSettings>) => {
@@ -213,15 +222,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const busy = results.filter((r) => r.inUse)
       if (!busy.length) return true
       const detail = busy
-        .map((b) => `端口 ${b.port} 被占用${b.pid ? `（PID ${b.pid}${b.processName ? ` / ${b.processName}` : ''}）` : ''}`)
+        .map((b) =>
+          b.pid
+            ? t('msg.portBusy', { port: b.port, pid: b.pid, name: b.processName ?? '?' })
+            : t('msg.portBusyNoPid', { port: b.port })
+        )
         .join('\n')
       return confirm({
-        title: '端口已被占用',
-        message: `${detail}\n\nDevHub 不会自动结束占用端口的程序。是否仍然启动？`,
-        confirmText: '仍然启动'
+        title: t('msg.portBusyTitle'),
+        message: t('msg.portBusyMessage', { detail }),
+        confirmText: t('msg.startAnyway')
       })
     },
-    [confirm]
+    [confirm, t]
   )
 
   const startService = useCallback(
@@ -232,9 +245,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!(await checkPortsBeforeStart(service))) return
       const result = await api.startService(projectId, serviceId)
       setRuntime((prev) => ({ ...prev, [keyOf(projectId, serviceId)]: result }))
-      if (result.status === 'error') toast('error', `${service.name}: ${result.error ?? '启动失败'}`)
+      if (result.status === 'error') {
+        toast('error', `${service.name}: ${result.error ?? t('msg.startFailedShort')}`)
+      }
     },
-    [checkPortsBeforeStart, toast]
+    [checkPortsBeforeStart, toast, t]
   )
 
   const stopService = useCallback(
@@ -262,16 +277,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         (s) => s.enabled && !isRunningStatus(runtime[keyOf(projectId, s.id)])
       )
       if (!pending.length) {
-        toast('info', `「${project.name}」的服务已在运行`)
+        toast('info', t('msg.alreadyRunning', { name: project.name }))
         return
       }
       for (const service of pending) {
         if (!(await checkPortsBeforeStart(service))) continue
       }
       await api.startAll(projectId)
-      toast('success', `已启动「${project.name}」的 ${pending.length} 个服务`)
+      toast('success', t('msg.startedCount', { name: project.name, n: pending.length }))
     },
-    [checkPortsBeforeStart, runtime, toast]
+    [checkPortsBeforeStart, runtime, toast, t]
   )
 
   const stopAll = useCallback(
@@ -286,17 +301,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return
         }
         const ok = await confirm({
-          title: '停止全部服务',
-          message: `确定停止「${project?.name ?? ''}」的 ${running.length} 个正在运行的服务吗？`,
-          confirmText: '停止',
+          title: t('msg.stopAllTitle'),
+          message: t('msg.stopAllMessage', { name: project?.name ?? '', n: running.length }),
+          confirmText: t('act.stop'),
           danger: true
         })
         if (!ok) return
       }
       await api.stopAll(projectId)
-      toast('info', `已停止「${project?.name ?? ''}」`)
+      toast('info', t('msg.stopped', { name: project?.name ?? '' }))
     },
-    [confirm, runtime, toast]
+    [confirm, runtime, toast, t]
   )
 
   const restartAll = useCallback(async (projectId: string) => {
@@ -310,7 +325,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         p.services.filter((s) => s.enabled && !isRunningStatus(runtime[keyOf(p.id, s.id)]))
       )
       if (!pending.length) {
-        toast('info', `分组「${group}」的服务已在运行`)
+        toast('info', t('msg.groupAlreadyRunning', { name: group }))
         return
       }
       // 一次性端口预检（避免逐个弹窗）：任一服务端口被占用则提示一次
@@ -321,9 +336,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
       await api.startGroup(group)
-      toast('success', `已启动分组「${group}」的 ${pending.length} 个服务`)
+      toast('success', t('msg.groupStartedCount', { name: group, n: pending.length }))
     },
-    [checkPortsBeforeStart, runtime, toast]
+    [checkPortsBeforeStart, runtime, toast, t]
   )
 
   const stopGroup = useCallback(
@@ -335,18 +350,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         })
         if (running.length) {
           const ok = await confirm({
-            title: '停止分组服务',
-            message: `确定停止分组「${group}」的 ${running.length} 个运行中的服务吗？`,
-            confirmText: '停止',
+            title: t('msg.groupStopTitle'),
+            message: t('msg.groupStopMessage', { name: group, n: running.length }),
+            confirmText: t('act.stop'),
             danger: true
           })
           if (!ok) return
         }
       }
       await api.stopGroup(group)
-      toast('info', `已停止分组「${group}」`)
+      toast('info', t('msg.groupStopped', { name: group }))
     },
-    [confirm, runtime, toast]
+    [confirm, runtime, toast, t]
   )
 
   const loadLogs = useCallback(async (projectId: string, serviceId: string) => {

@@ -1,3 +1,5 @@
+import { translate, type Lang } from '@shared/i18n'
+
 export function formatDuration(ms?: number): string {
   if (!ms || ms < 0) return '--:--:--'
   const total = Math.floor(ms / 1000)
@@ -7,13 +9,13 @@ export function formatDuration(ms?: number): string {
   return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':')
 }
 
-export function relativeTime(ts?: number): string {
-  if (!ts) return '从未'
+export function relativeTime(ts?: number, lang?: Lang): string {
+  if (!ts) return translate(lang, 'time.never')
   const diff = Date.now() - ts
-  if (diff < 60_000) return '刚刚'
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} 天前`
+  if (diff < 60_000) return translate(lang, 'time.justNow')
+  if (diff < 3_600_000) return translate(lang, 'time.minutesAgo', { n: Math.floor(diff / 60_000) })
+  if (diff < 86_400_000) return translate(lang, 'time.hoursAgo', { n: Math.floor(diff / 3_600_000) })
+  if (diff < 7 * 86_400_000) return translate(lang, 'time.daysAgo', { n: Math.floor(diff / 86_400_000) })
   return new Date(ts).toLocaleDateString()
 }
 

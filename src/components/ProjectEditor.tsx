@@ -11,7 +11,9 @@ import {
 } from 'lucide-react'
 import type { DetectedProject, EnvVar, ProjectConfig, ServiceConfig, TerminalMode } from '@shared/types'
 import { TERMINAL_MODE_LABELS, createDefaultService, createId } from '@shared/types'
+import { terminalModeLabel } from '@shared/i18n'
 import { useStore } from '../lib/store'
+import { useT } from '../lib/i18n'
 import { Button, Field, IconButton, Input, Modal, Select, TextArea, Toggle } from './ui'
 
 interface Props {
@@ -21,6 +23,7 @@ interface Props {
 
 export function ProjectEditor({ project, onClose }: Props) {
   const { saveProject, toast, config } = useStore()
+  const { t, lang } = useT()
   const [draft, setDraft] = useState<ProjectConfig>({ ...project })
   const [detected, setDetected] = useState<Record<string, DetectedProject | undefined>>({})
 
@@ -56,23 +59,23 @@ export function ProjectEditor({ project, onClose }: Props) {
 
   const detectScripts = async (serviceId: string, cwd: string) => {
     if (!cwd) {
-      toast('warn', '请先填写工作目录')
+      toast('warn', t('ed.needCwd'))
       return
     }
     const results = await window.devhub.scanDirectory(cwd, 0)
     const found = results.find((r) => r.isProject)
     setDetected((prev) => ({ ...prev, [serviceId]: found }))
-    if (!found) toast('info', '未在该目录识别到项目（package.json / pubspec.yaml / requirements.txt 等）')
+    if (!found) toast('info', t('ed.notDetected'))
   }
 
   const addDetectedServices = async () => {
     if (!draft.path) {
-      toast('warn', '请先填写项目目录')
+      toast('warn', t('ed.needPath'))
       return
     }
     const results = (await window.devhub.scanDirectory(draft.path, 2)).filter((r) => r.isProject)
     if (!results.length) {
-      toast('info', '没有扫描到可识别的项目')
+      toast('info', t('ed.noScanned'))
       return
     }
     const services: ServiceConfig[] = results.map((r) =>
@@ -84,7 +87,7 @@ export function ProjectEditor({ project, onClose }: Props) {
       })
     )
     setDraft((d) => ({ ...d, services: [...d.services, ...services] }))
-    toast('success', `已添加 ${services.length} 个服务，请检查命令是否正确`)
+    toast('success', t('ed.addedServices', { n: services.length }))
   }
 
   const browse = async (setter: (value: string) => void) => {
@@ -95,7 +98,7 @@ export function ProjectEditor({ project, onClose }: Props) {
   const save = async () => {
     const cleaned: ProjectConfig = {
       ...draft,
-      name: draft.name.trim() || '未命名项目',
+      name: draft.name.trim() || t('ed.untitled'),
       services: draft.services.map((s) => ({
         ...s,
         name: s.name.trim() || 'Service',
@@ -111,16 +114,20 @@ export function ProjectEditor({ project, onClose }: Props) {
 
   return (
     <Modal
-      title={project.id && config.projects.some((p) => p.id === project.id) ? `编辑项目 · ${project.name}` : '新建项目'}
+      title={
+        project.id && config.projects.some((p) => p.id === project.id)
+          ? t('ed.titleEdit', { name: project.name })
+          : t('ed.titleNew')
+      }
       onClose={onClose}
       width="w-[860px]"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            取消
+            {t('act.cancel')}
           </Button>
           <Button variant="primary" onClick={() => void save()}>
-            保存
+            {t('act.save')}
           </Button>
         </>
       }
@@ -128,55 +135,61 @@ export function ProjectEditor({ project, onClose }: Props) {
       <div className="space-y-4">
         {/* 基本信息 */}
         <div className="grid grid-cols-[64px_1fr] gap-3">
-          <Field label="图标">
+          <Field label={t('ed.icon')}>
             <Input value={draft.icon} maxLength={2} onChange={(e) => patch({ icon: e.target.value })} />
           </Field>
-          <Field label="项目名称">
+          <Field label={t('ed.name')}>
             <Input value={draft.name} onChange={(e) => patch({ name: e.target.value })} placeholder="ComHome" />
           </Field>
         </div>
 
-        <Field label="项目目录" hint="DevHub 不会写入项目目录">
+        <Field label={t('ed.path')} hint={t('ed.pathHint')}>
           <div className="flex gap-2">
             <Input value={draft.path} onChange={(e) => patch({ path: e.target.value })} placeholder="E:\Projects\ComHome" />
             <Button variant="outline" onClick={() => void browse((v) => patch({ path: v }))}>
-              <Folder size={13} /> 浏览
+              <Folder size={13} /> {t('act.browse')}
             </Button>
             <Button variant="outline" onClick={() => void addDetectedServices()}>
-              <Sparkles size={13} /> 扫描子项目
+              <Sparkles size={13} /> {t('ed.scanSub')}
             </Button>
           </div>
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="分组" hint="填同一个分组名的多个项目会合并成一张卡片，可一键启停全部成员（如前后端）">
-            <Input value={draft.group} onChange={(e) => patch({ group: e.target.value })} placeholder="如 MyApp（前后端同名）" />
+          <Field label={t('ed.group')} hint={t('ed.groupHint')}>
+            <Input
+              value={draft.group}
+              onChange={(e) => patch({ group: e.target.value })}
+              placeholder={t('ed.groupPlaceholder')}
+            />
           </Field>
-          <Field label="标签" hint="逗号分隔">
+          <Field label={t('ed.tags')} hint={t('ed.tagsHint')}>
             <Input
               value={draft.tags.join(', ')}
               onChange={(e) =>
-                patch({ tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })
+                patch({ tags: e.target.value.split(',').map((t2) => t2.trim()).filter(Boolean) })
               }
               placeholder="Node, Backend"
             />
           </Field>
         </div>
 
-        <Field label="备注">
+        <Field label={t('ed.notes')}>
           <TextArea rows={2} value={draft.notes} onChange={(e) => patch({ notes: e.target.value })} />
         </Field>
 
         <div className="flex items-center gap-4">
-          <Toggle checked={draft.favorite} onChange={(v) => patch({ favorite: v })} label="收藏" />
+          <Toggle checked={draft.favorite} onChange={(v) => patch({ favorite: v })} label={t('act.favorite')} />
         </div>
 
         {/* 服务列表 */}
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[13px] font-semibold text-ink">服务（{draft.services.length}）</span>
+            <span className="text-[13px] font-semibold text-ink">
+              {t('ed.services', { n: draft.services.length })}
+            </span>
             <Button variant="outline" onClick={addService}>
-              <Plus size={13} /> 添加服务
+              <Plus size={13} /> {t('ed.addService')}
             </Button>
           </div>
 
@@ -189,15 +202,15 @@ export function ProjectEditor({ project, onClose }: Props) {
                     value={service.name}
                     onChange={(e) => updateService(service.id, { name: e.target.value })}
                   />
-                  <span className="text-[11px] text-subtle">#{index + 1} 启动顺序</span>
+                  <span className="text-[11px] text-subtle">{t('ed.startupOrder', { n: index + 1 })}</span>
                   <span className="flex-1" />
-                  <IconButton title="上移" onClick={() => move(index, -1)}>
+                  <IconButton title={t('ed.moveUp')} onClick={() => move(index, -1)}>
                     <ArrowUp size={14} />
                   </IconButton>
-                  <IconButton title="下移" onClick={() => move(index, 1)}>
+                  <IconButton title={t('ed.moveDown')} onClick={() => move(index, 1)}>
                     <ArrowDown size={14} />
                   </IconButton>
-                  <IconButton title="删除服务" onClick={() => removeService(service.id)}>
+                  <IconButton title={t('ed.removeService')} onClick={() => removeService(service.id)}>
                     <Trash2 size={14} />
                   </IconButton>
                 </div>
@@ -205,7 +218,7 @@ export function ProjectEditor({ project, onClose }: Props) {
                 <div className="space-y-2">
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <Field label="工作目录">
+                      <Field label={t('ed.cwd')}>
                         <div className="flex gap-2">
                           <Input
                             value={service.cwd}
@@ -216,14 +229,14 @@ export function ProjectEditor({ project, onClose }: Props) {
                             <Folder size={13} />
                           </Button>
                           <Button variant="outline" onClick={() => void detectScripts(service.id, service.cwd || draft.path)}>
-                            <Search size={13} /> 检测
+                            <Search size={13} /> {t('ed.detect')}
                           </Button>
                         </div>
                       </Field>
                     </div>
                   </div>
 
-                  <Field label="启动命令">
+                  <Field label={t('ed.command')}>
                     <Input
                       className="font-mono"
                       value={service.command}
@@ -234,7 +247,7 @@ export function ProjectEditor({ project, onClose }: Props) {
 
                   {detected[service.id]?.scripts?.length ? (
                     <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-1.5">
-                      <span className="text-[11px] text-subtle">检测到脚本：</span>
+                      <span className="text-[11px] text-subtle">{t('ed.detectedScripts')}</span>
                       {detected[service.id]!.scripts.map((s) => (
                         <button
                           key={s.name}
@@ -245,21 +258,21 @@ export function ProjectEditor({ project, onClose }: Props) {
                         </button>
                       ))}
                       <span className="flex-1" />
-                      <IconButton title="关闭" onClick={() => setDetected((p) => ({ ...p, [service.id]: undefined }))}>
+                      <IconButton title={t('act.close')} onClick={() => setDetected((p) => ({ ...p, [service.id]: undefined }))}>
                         <X size={13} />
                       </IconButton>
                     </div>
                   ) : null}
 
                   <div className="grid grid-cols-4 gap-2">
-                    <Field label="启动延迟(ms)">
+                    <Field label={t('ed.startupDelay')}>
                       <Input
                         type="number"
                         value={service.startupDelay}
                         onChange={(e) => updateService(service.id, { startupDelay: Number(e.target.value) || 0 })}
                       />
                     </Field>
-                    <Field label="端口" hint="逗号分隔">
+                    <Field label={t('ed.ports')} hint={t('ed.tagsHint')}>
                       <Input
                         value={service.ports.join(',')}
                         onChange={(e) =>
@@ -273,14 +286,14 @@ export function ProjectEditor({ project, onClose }: Props) {
                         placeholder="3000"
                       />
                     </Field>
-                    <Field label="运行方式">
+                    <Field label={t('ed.runMode')}>
                       <Select
                         value={service.terminalMode}
                         onChange={(e) => updateService(service.id, { terminalMode: e.target.value as TerminalMode })}
                       >
-                        {Object.entries(TERMINAL_MODE_LABELS).map(([k, v]) => (
+                        {Object.keys(TERMINAL_MODE_LABELS).map((k) => (
                           <option key={k} value={k}>
-                            {v}
+                            {terminalModeLabel(lang, k)}
                           </option>
                         ))}
                       </Select>
@@ -289,12 +302,12 @@ export function ProjectEditor({ project, onClose }: Props) {
                       <Toggle
                         checked={service.enabled}
                         onChange={(v) => updateService(service.id, { enabled: v })}
-                        label="参与启动全部"
+                        label={t('ed.includeInStartAll')}
                       />
                       <Toggle
                         checked={service.autoRestart}
                         onChange={(v) => updateService(service.id, { autoRestart: v })}
-                        label="崩溃自动重启"
+                        label={t('ed.autoRestart')}
                       />
                     </div>
                   </div>
@@ -309,7 +322,7 @@ export function ProjectEditor({ project, onClose }: Props) {
 
             {draft.services.length === 0 && (
               <div className="rounded-lg border border-dashed border-line p-6 text-center text-[12px] text-subtle">
-                还没有服务。点击「添加服务」手动添加，或点「扫描子项目」自动识别。
+                {t('ed.emptyServices')}
               </div>
             )}
           </div>
@@ -320,15 +333,16 @@ export function ProjectEditor({ project, onClose }: Props) {
 }
 
 function EnvVarEditor({ env, onChange }: { env: EnvVar[]; onChange: (env: EnvVar[]) => void }) {
+  const { t } = useT()
   const update = (index: number, patch: Partial<EnvVar>) =>
     onChange(env.map((e, i) => (i === index ? { ...e, ...patch } : e)))
 
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-[12px] font-medium text-subtle">环境变量（仅作用于该服务子进程）</span>
+        <span className="text-[12px] font-medium text-subtle">{t('ed.envTitle')}</span>
         <Button variant="ghost" onClick={() => onChange([...env, { key: '', value: '', secret: false }])}>
-          <Plus size={12} /> 添加
+          <Plus size={12} /> {t('ed.envAdd')}
         </Button>
       </div>
       {env.length > 0 && (
@@ -350,9 +364,9 @@ function EnvVarEditor({ env, onChange }: { env: EnvVar[]; onChange: (env: EnvVar
               />
               <label className="flex items-center gap-1 text-[11px] text-subtle">
                 <input type="checkbox" checked={item.secret} onChange={(e) => update(index, { secret: e.target.checked })} />
-                密钥
+                {t('ed.secret')}
               </label>
-              <IconButton title="删除" onClick={() => onChange(env.filter((_, i) => i !== index))}>
+              <IconButton title={t('act.delete')} onClick={() => onChange(env.filter((_, i) => i !== index))}>
                 <Trash2 size={13} />
               </IconButton>
             </div>

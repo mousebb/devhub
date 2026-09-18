@@ -47,7 +47,13 @@ export async function getTools(): Promise<ToolInfo[]> {
       if (!path) return { name: tool.name, found: false }
       if (!tool.arg) return { name: tool.name, found: true, path }
       const res = await run(tool.name, [tool.arg], 8000)
-      const version = (res.stdout || res.stderr).split(/\r?\n/).find((l) => l.trim())?.trim()
+      // 只取「看起来像版本号」的那一行：真实版本号一定含数字。
+      // 某些工具（例如没装 SDK 的 dotnet）会把多行错误说明打到 stderr，
+      // 直接取首行会把 "The command could not be loaded, possibly because:" 当成版本号显示出来。
+      const version = (res.stdout || res.stderr)
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .find((l) => /\d/.test(l))
       return { name: tool.name, found: true, path, version }
     })
   )
@@ -57,7 +63,8 @@ export async function getTools(): Promise<ToolInfo[]> {
 /** 只读：展示 DevHub 当前继承的环境变量（绝不修改） */
 export function getEnvInfo(): EnvInfoEntry[] {
   const keys = ['PATH', 'NODE_PATH', 'PYTHONPATH', 'JAVA_HOME', 'ANDROID_HOME', 'PUB_CACHE']
-  return keys.map((key) => ({ key, value: process.env[key] ?? '(未设置)' }))
+  // 未设置时返回空串，由渲染层按当前语言显示「未设置 / not set」
+  return keys.map((key) => ({ key, value: process.env[key] ?? '' }))
 }
 
 export async function checkPorts(ports: number[]): Promise<PortCheckResult[]> {

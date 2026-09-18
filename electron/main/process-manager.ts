@@ -4,6 +4,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { ConfigManager } from './config-manager'
 import { LogStore, serviceKey } from './log-store'
+import { translate, type MsgKey, type MsgParams } from '@shared/i18n'
 import type { ProjectConfig, ServiceConfig, ServiceRuntime, ServiceStatus, TerminalMode } from '@shared/types'
 
 interface ManagedProcess {
@@ -40,6 +41,11 @@ export class ProcessManager extends EventEmitter {
     this.runRegistryPath = runRegistryPath
   }
 
+  /** 写进日志的系统行文案跟随界面语言（写入时的语言为准，之后切语言不影响历史日志） */
+  private t(key: MsgKey, params?: MsgParams): string {
+    return translate(this.config.get().settings.language, key, params)
+  }
+
   /* ------------------------------------------------------------------ */
   /* 查询                                                                */
   /* ------------------------------------------------------------------ */
@@ -65,7 +71,7 @@ export class ProcessManager extends EventEmitter {
 
   async start(projectId: string, serviceId: string): Promise<ServiceRuntime> {
     const found = this.config.getService(projectId, serviceId)
-    if (!found) return { projectId, serviceId, status: 'error', error: '服务不存在' }
+    if (!found) return { projectId, serviceId, status: 'error', error: this.t('main.noService') }
     const { project, service } = found
 
     const key = serviceKey(projectId, serviceId)
@@ -75,9 +81,9 @@ export class ProcessManager extends EventEmitter {
     }
 
     const cwd = (service.cwd || project.path || '').trim()
-    if (!cwd) return this.fail(projectId, serviceId, '未配置工作目录')
-    if (!existsSync(cwd)) return this.fail(projectId, serviceId, `工作目录不存在：${cwd}`)
-    if (!service.command.trim()) return this.fail(projectId, serviceId, '未配置启动命令')
+    if (!cwd) return this.fail(projectId, serviceId, this.t('main.noCwd'))
+    if (!existsSync(cwd)) return this.fail(projectId, serviceId, this.t('main.cwdMissing', { cwd }))
+    if (!service.command.trim()) return this.fail(projectId, serviceId, this.t('main.noCommand'))
 
     const runtime: ServiceRuntime = {
       projectId,
@@ -185,14 +191,14 @@ export class ProcessManager extends EventEmitter {
       const wasRunning = managed.runtime.status === 'running'
       managed.runtime.status = managed.manualStop || code === 0 ? 'stopped' : 'exited'
       this.emitStatus(managed)
-      this.logSystem(managed, `# 进程退出 code=${code} signal=${signal ?? 'none'}`)
+      this.logSystem(managed, this.t('main.procExited', { code: code ?? '?', signal: signal ?? 'none' }))
 
       if (!managed.manualStop && service.autoRestart && code !== 0 && wasRunning) {
         const n = (managed.runtime.restarts ?? 0) + 1
         if (n <= 10) {
           managed.runtime.restarts = n
           const delay = Math.min(1000 * n, 5000)
-          this.logSystem(managed, `# 将在 ${delay}ms 后自动重启（第 ${n} 次）`)
+          this.logSystem(managed, this.t('main.autoRestart', { delay, n }))
           setTimeout(() => {
             void this.restart(managed.runtime.projectId, managed.runtime.serviceId)
           }, delay)
@@ -224,14 +230,11 @@ export class ProcessManager extends EventEmitter {
     managed.runtime.status = 'running'
     managed.runtime.external = true
     this.emitStatus(managed)
-    this.logSystem(
-      managed,
-      `# 已在外部窗口启动（${service.terminalMode}），日志请查看对应终端窗口`
-    )
+    this.logSystem(managed, this.t('main.externalStarted', { mode: service.terminalMode }))
 
     child.on('error', (err) => {
       if (service.terminalMode === 'terminal') {
-        this.logSystem(managed, `# Windows Terminal 不可用，回退到 CMD：${err.message}`)
+        this.logSystem(managed, this.t('main.wtFallback', { error: err.message }))
         const fallback = spawn('cmd.exe', ['/k', service.command], opts)
         fallback.unref()
         managed.child = fallback
@@ -258,7 +261,7 @@ export class ProcessManager extends EventEmitter {
     managed.runtime.error = message
     managed.runtime.pid = undefined
     this.emitStatus(managed)
-    this.logSystem(managed, `启动失败：${message}`)
+    this.logSystem(managed, this.t('main.startFailed', { message }))
   }
 
   private fail(projectId: string, serviceId: string, message: string): ServiceRuntime {
@@ -266,7 +269,7 @@ export class ProcessManager extends EventEmitter {
     const managed: ManagedProcess = { runtime, manualStop: true, partial: { out: '', err: '' } }
     this.processes.set(serviceKey(projectId, serviceId), managed)
     this.emitStatus(managed)
-    this.logSystem(managed, `启动失败：${message}`)
+    this.logSystem(managed, this.t('main.startFailed', { message }))
     return runtime
   }
 
@@ -318,14 +321,14 @@ export class ProcessManager extends EventEmitter {
     }
     const exited = await this.waitExit(pid, GRACE_MS)
     if (exited) {
-      this.logSystem(managed, `# 服务已退出（PID ${pid}）`)
+      this.logSystem(managed, this.t('main.serviceExited', { pid }))
       this.processes.delete(serviceKey(projectId, serviceId))
       return
     }
 
     // 2) 强制阶段：杀掉整棵进程树（npm -> node -> 子进程）
     const ok = await this.killTree(pid)
-    this.logSystem(managed, ok ? `# 已强制结束进程树（PID ${pid}）` : `# 无法结束进程树（PID ${pid}），请手动检查`)
+    this.logSystem(managed, this.t(ok ? 'main.killOk' : 'main.killFail', { pid }))
     this.processes.delete(serviceKey(projectId, serviceId))
   }
 
@@ -521,10 +524,7 @@ export class ProcessManager extends EventEmitter {
       }
       this.processes.set(key, managed)
       this.emitStatus(managed)
-      this.logSystem(
-        managed,
-        `# 已从上次会话恢复（PID ${info.pid}）。实时日志不可用，但可在此停止该进程。`
-      )
+      this.logSystem(managed, this.t('main.recovered', { pid: info.pid }))
     }
   }
 }

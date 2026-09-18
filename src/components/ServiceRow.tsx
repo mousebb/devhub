@@ -1,6 +1,7 @@
 import { Play, Square } from 'lucide-react'
 import type { ProjectConfig, ServiceConfig, ServiceRuntime } from '@shared/types'
 import { IconButton, StatusDot } from './ui'
+import { useT } from '../lib/i18n'
 import { formatDuration } from '../lib/format'
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 
 /** 单个服务的状态行（项目卡片与分组卡片共用） */
 export function ServiceRow({ service, runtime, now, onStart, onStop }: Props) {
+  const { t } = useT()
   const rt: ServiceRuntime =
     runtime ?? { projectId: '', serviceId: service.id, status: 'stopped' }
 
@@ -23,7 +25,7 @@ export function ServiceRow({ service, runtime, now, onStart, onStop }: Props) {
       <span className="min-w-0 flex-1 truncate text-[13px] text-ink/90">{service.name}</span>
       {rt.status === 'running' ? (
         <span className="font-mono text-[11px] text-subtle">
-          {rt.recovered && <span className="text-warn">已恢复 · </span>}
+          {rt.recovered && <span className="text-warn">{t('svc.recovered')}</span>}
           {rt.pid ? `PID ${rt.pid} · ` : ''}
           {formatDuration(now - (rt.startedAt ?? now))}
         </span>
@@ -31,11 +33,11 @@ export function ServiceRow({ service, runtime, now, onStart, onStop }: Props) {
         <span className="text-[11px] capitalize text-subtle">{rt.status}</span>
       )}
       {rt.status === 'running' || rt.status === 'starting' ? (
-        <IconButton title="停止" onClick={onStop}>
+        <IconButton title={t('act.stop')} onClick={onStop}>
           <Square size={12} />
         </IconButton>
       ) : (
-        <IconButton title="启动" onClick={onStart}>
+        <IconButton title={t('act.start')} onClick={onStart}>
           <Play size={12} />
         </IconButton>
       )}

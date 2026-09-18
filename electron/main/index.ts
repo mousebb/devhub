@@ -3,6 +3,7 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { app, BrowserWindow, Menu, Tray, dialog, ipcMain, shell } from 'electron'
 import { CHANNELS, EVENTS } from '@shared/ipc'
+import { translate, type MsgKey, type MsgParams } from '@shared/i18n'
 import type { AppConfig, ProjectConfig, ServiceRuntime } from '@shared/types'
 import { createId } from '@shared/types'
 import { ConfigManager, resolveDataDir } from './config-manager'
@@ -79,6 +80,11 @@ function broadcast(channel: string, payload: unknown) {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload)
 }
 
+/** 主进程侧文案（托盘 / 系统弹窗）：跟随设置里的界面语言 */
+function t(key: MsgKey, params?: MsgParams): string {
+  return translate(configManager?.get().settings.language, key, params)
+}
+
 function saveAndBroadcast(): AppConfig {
   const config = configManager.save()
   broadcast(EVENTS.configChanged, config)
@@ -104,11 +110,11 @@ function refreshTrayMenu() {
   if (!tray) return
   const running = processManager.snapshot().filter((r) => r.status === 'running' || r.status === 'starting')
   const items: Electron.MenuItemConstructorOptions[] = [
-    { label: '打开 DevHub', click: () => mainWindow?.show() },
+    { label: t('main.open'), click: () => mainWindow?.show() },
     { type: 'separator' }
   ]
   if (!running.length) {
-    items.push({ label: '没有正在运行的服务', enabled: false })
+    items.push({ label: t('main.noRunning'), enabled: false })
   } else {
     for (const r of running) {
       const project = configManager.getProject(r.projectId)
@@ -117,7 +123,7 @@ function refreshTrayMenu() {
         label: `● ${project?.name ?? '?'} / ${service?.name ?? '?'}`,
         submenu: [
           {
-            label: '停止',
+            label: t('act.stop'),
             click: () => {
               void processManager.stop(r.projectId, r.serviceId)
               refreshTrayMenu()
@@ -127,13 +133,13 @@ function refreshTrayMenu() {
       })
     }
     items.push({ type: 'separator' }, {
-      label: '停止全部',
+      label: t('main.stopAll'),
       click: () => {
         void processManager.stopEverything().then(refreshTrayMenu)
       }
     })
   }
-  items.push({ type: 'separator' }, { label: '退出 DevHub', click: () => app.quit() })
+  items.push({ type: 'separator' }, { label: t('main.quit'), click: () => app.quit() })
   tray.setContextMenu(Menu.buildFromTemplate(items))
 }
 
@@ -151,13 +157,14 @@ function registerIpc() {
       configManager.update((c) => {
         c.settings = { ...c.settings, ...settings }
       })
+      refreshTrayMenu() // 语言可能变了，托盘菜单要跟着切
     }
     return saveAndBroadcast()
   })
 
   ipcMain.handle(CHANNELS.configExport, async () => {
     const res = await dialog.showSaveDialog({
-      title: '导出配置',
+      title: t('main.exportTitle'),
       defaultPath: `devhub-backup-${new Date().toISOString().slice(0, 10)}.json`,
       filters: [{ name: 'JSON', extensions: ['json'] }]
     })
@@ -168,7 +175,7 @@ function registerIpc() {
 
   ipcMain.handle(CHANNELS.configImport, async () => {
     const res = await dialog.showOpenDialog({
-      title: '导入配置',
+      title: t('main.importTitle'),
       filters: [{ name: 'JSON', extensions: ['json'] }],
       properties: ['openFile']
     })
@@ -280,7 +287,7 @@ function registerIpc() {
     const project = configManager.getProject(projectId)
     const service = configManager.getService(projectId, serviceId)?.service
     const res = await dialog.showSaveDialog({
-      title: '保存日志',
+      title: t('main.saveLogTitle'),
       defaultPath: `${safeFileName(project?.name ?? 'project')}-${safeFileName(service?.name ?? 'service')}.log`,
       filters: [{ name: 'Log', extensions: ['log', 'txt'] }]
     })

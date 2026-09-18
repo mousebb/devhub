@@ -7,21 +7,21 @@
 > DevHub does not manage your environment (it never installs Node/Python, never touches PATH).
 > It only manages "run *this command* in *that directory*".
 
-![Project list](docs/screenshot-running.png)
+![Project list](docs/screenshot-running-en.png)
 
-_(Screenshots use demo data: a `dpv-shop` group whose frontend and backend are merged into one group card with one-click start/stop. The UI itself is Chinese-only for now.)_
+_(Screenshots use demo data: a `dpv-shop` group whose frontend and backend are merged into one group card with one-click start/stop. The UI ships in both Chinese and English — switch it under **Settings → Language**; the Chinese screenshots are in [README.md](README.md).)_
 
 ## Screenshots
 
 **Project detail / live logs** — service status, ports, PID, uptime, plus the real-time output of
 `npm run dev` (stdout/stderr color-coded, filterable, selectable, auto-scroll).
 
-![Project detail](docs/screenshot-detail.png)
+![Project detail](docs/screenshot-detail-en.png)
 
-**Settings** — run mode, port checks, log limits, tray behavior, and a read-only view of the
-inherited environment and available tools. Config and logs live under DevHub's own `data/` folder.
+**Settings** — language, run mode, port checks, log limits, tray behavior, and a read-only view of
+the inherited environment and available tools. Config and logs live under DevHub's own `data/` folder.
 
-![Settings](docs/screenshot-settings.png)
+![Settings](docs/screenshot-settings-en.png)
 
 ## Getting started (3 steps)
 
@@ -121,6 +121,9 @@ node scripts/smoke-test.mjs   # no UI: verifies start command / live logs / proc
 - **Tech-stack icons**: brand icons per project type (Node.js / Python / Flutter / Go / Rust /
   .NET / Java / PHP / static site), falling back to your custom emoji when unknown
 - Search (name / path / service / command / tags), sorting, favorites, recently started, tag filters
+- **Interface language**: Simplified Chinese / English, switched under **Settings → Language**. The
+  choice is saved to `config.json` and applies everywhere — window UI, tray menu, dialogs and the
+  system lines DevHub writes into the logs (e.g. "process exited", "restoring session")
 
 ### Groups and one-click start/stop
 
@@ -190,14 +193,14 @@ devhub/
 │   │   ├── system.ts           # port checks / where / open VS Code, etc.
 │   │   └── icon.ts             # generates tray / window icon at runtime
 │   ├── preload/index.ts        # exposes DevHubApi via contextBridge
-│   └── shared/                 # types + IPC channel definitions (shared by main/renderer)
+│   └── shared/                 # types + IPC channels + i18n dictionary (zh/en, shared by main/renderer)
 ├── src/                        # React renderer
 │   ├── components/             # Sidebar (collapsible tree) / GroupCard / ProjectCard / ServiceRow /
 │   │                           # ProjectDetail / LogViewer / ProjectEditor / AddProjectWizard /
 │   │                           # StackIcon (tech-stack icons) / SettingsPage
-│   ├── lib/                    # api / store (global state) / format
+│   ├── lib/                    # api / store (global state) / format / i18n hook
 │   └── App.tsx
-├── docs/                       # UI screenshots used by the README
+├── docs/                       # UI screenshots used by the README (zh + en)
 └── scripts/                    # start.mjs launcher / smoke-test.mjs core behaviour self-check
 ```
 

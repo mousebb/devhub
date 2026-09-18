@@ -3,6 +3,7 @@ import { Check, Folder, Loader2, Scan, Sparkles } from 'lucide-react'
 import type { DetectedProject } from '@shared/types'
 import { STACK_LABELS, createDefaultService } from '@shared/types'
 import { useStore } from '../lib/store'
+import { useT } from '../lib/i18n'
 import { Badge, Button, Field, Input, Modal } from './ui'
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 
 export function AddProjectWizard({ onClose, onManual }: Props) {
   const { saveProject, toast, config } = useStore()
+  const { t } = useT()
   const [root, setRoot] = useState('')
   const [scanning, setScanning] = useState(false)
   const [results, setResults] = useState<DetectedProject[]>([])
@@ -22,7 +24,7 @@ export function AddProjectWizard({ onClose, onManual }: Props) {
   const scan = async (dir?: string) => {
     const target = dir ?? root
     if (!target) {
-      toast('warn', '请选择要扫描的目录')
+      toast('warn', t('wiz.pickFolder'))
       return
     }
     setScanning(true)
@@ -40,7 +42,7 @@ export function AddProjectWizard({ onClose, onManual }: Props) {
       } else {
         setGroup('')
       }
-      if (!found.length) toast('info', '没有识别到项目，可以手动添加')
+      if (!found.length) toast('info', t('wiz.noProjectHint'))
     } finally {
       setScanning(false)
     }
@@ -80,32 +82,32 @@ export function AddProjectWizard({ onClose, onManual }: Props) {
       }
       await saveProject(project)
     }
-    toast('success', `已添加 ${chosen.length} 个项目`)
+    toast('success', t('wiz.added', { n: chosen.length }))
     onClose()
   }
 
   return (
     <Modal
-      title="添加项目"
+      title={t('wiz.title')}
       onClose={onClose}
       width="w-[720px]"
       footer={
         <>
           <Button variant="ghost" onClick={() => onManual(root)}>
-            手动创建
+            {t('wiz.manual')}
           </Button>
           <span className="flex-1" />
           <Button variant="ghost" onClick={onClose}>
-            取消
+            {t('act.cancel')}
           </Button>
           <Button variant="primary" disabled={!selected.size} onClick={() => void createSelected()}>
-            添加所选（{selected.size}）
+            {t('wiz.addSelected', { n: selected.size })}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
-        <Field label="扫描目录" hint="DevHub 只读取目录，不会修改任何文件">
+        <Field label={t('wiz.scanRoot')} hint={t('wiz.scanRootHint')}>
           <div className="flex gap-2">
             <Input
               value={root}
@@ -125,22 +127,19 @@ export function AddProjectWizard({ onClose, onManual }: Props) {
                 }
               }}
             >
-              <Folder size={13} /> 浏览
+              <Folder size={13} /> {t('act.browse')}
             </Button>
             <Button variant="primary" onClick={() => void scan()} disabled={scanning}>
-              {scanning ? <Loader2 size={13} className="animate-spin" /> : <Scan size={13} />} 扫描
+              {scanning ? <Loader2 size={13} className="animate-spin" /> : <Scan size={13} />} {t('wiz.scan')}
             </Button>
           </div>
         </Field>
 
-        <Field
-          label="分组名称（可选）"
-          hint="填写后，所选多个项目会合并成一个分组卡片，可一键启动/停止全部成员（如前后端）"
-        >
+        <Field label={t('wiz.groupLabel')} hint={t('wiz.groupHint')}>
           <Input
             value={group}
             onChange={(e) => setGroup(e.target.value)}
-            placeholder="留空则各项目独立显示"
+            placeholder={t('wiz.groupPlaceholder')}
           />
         </Field>
 
@@ -148,10 +147,10 @@ export function AddProjectWizard({ onClose, onManual }: Props) {
           {!scanned ? (
             <div className="flex flex-col items-center gap-2 py-10 text-center text-[12px] text-subtle">
               <Sparkles size={20} />
-              选择一个目录后点击「扫描」，DevHub 会自动识别 package.json / pubspec.yaml / requirements.txt 等项目
+              {t('wiz.hintPick')}
             </div>
           ) : results.length === 0 ? (
-            <div className="py-10 text-center text-[12px] text-subtle">没有识别到项目</div>
+            <div className="py-10 text-center text-[12px] text-subtle">{t('wiz.noneFound')}</div>
           ) : (
             <div className="max-h-[340px] divide-y divide-line overflow-y-auto">
               {results.map((item) => {

@@ -3,6 +3,8 @@
  * 主进程与渲染进程共用（仅类型 + 常量，无副作用）
  */
 
+import { DEFAULT_LANG, type Lang } from './i18n'
+
 export const CONFIG_VERSION = 1
 
 /** 服务的运行方式 */
@@ -64,6 +66,8 @@ export interface ProjectConfig {
 
 export interface AppSettings {
   theme: 'system' | 'light' | 'dark'
+  /** 界面语言：zh 简体中文 / en English */
+  language: Lang
   confirmBeforeStopAll: boolean
   checkPorts: boolean
   maxLogLines: number
@@ -185,6 +189,7 @@ export function createId(prefix = 'id'): string {
 export function createDefaultSettings(): AppSettings {
   return {
     theme: 'dark',
+    language: DEFAULT_LANG,
     confirmBeforeStopAll: true,
     checkPorts: true,
     maxLogLines: 3000,

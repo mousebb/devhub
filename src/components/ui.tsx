@@ -1,6 +1,7 @@
 import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { X } from 'lucide-react'
 import type { ServiceStatus } from '@shared/types'
+import { useT } from '../lib/i18n'
 
 type BtnVariant = 'primary' | 'ghost' | 'outline' | 'danger' | 'success' | 'warn'
 
@@ -84,14 +85,16 @@ export function Toggle({
   onChange: (v: boolean) => void
   label?: string
 }) {
+  // 用块级 flex（而非 inline-flex）+ w-fit：放在块级流里时每个 Toggle 各自占一行，
+  // 否则多个 Toggle 会挤在同一行、父级的 space-y 间距完全失效。
   return (
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className="inline-flex items-center gap-2 text-[13px] text-ink"
+      className="flex w-fit items-center gap-2 text-[13px] text-ink"
     >
       <span
-        className={`relative h-4 w-8 rounded-full transition-colors ${checked ? 'bg-accent' : 'bg-line'}`}
+        className={`relative h-4 w-8 shrink-0 rounded-full transition-colors ${checked ? 'bg-accent' : 'bg-line'}`}
       >
         <span
           className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${checked ? 'left-4' : 'left-0.5'}`}
@@ -127,6 +130,7 @@ export function Modal({
   footer?: ReactNode
   width?: string
 }) {
+  const { t } = useT()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -142,7 +146,7 @@ export function Modal({
       >
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-[14px] font-semibold text-ink">{title}</h2>
-          <IconButton onClick={onClose} title="关闭">
+          <IconButton onClick={onClose} title={t('act.close')}>
             <X size={16} />
           </IconButton>
         </div>

@@ -9,6 +9,7 @@ import {
   Star
 } from 'lucide-react'
 import type { ProjectConfig, ServiceRuntime } from '@shared/types'
+import { useT } from '../lib/i18n'
 import { StackIcon, projectStack } from './StackIcon'
 
 export type View =
@@ -41,6 +42,7 @@ export function Sidebar({
   onSettings,
   runningCount
 }: Props) {
+  const { t } = useT()
   const [treeOpen, setTreeOpen] = useState(true)
 
   const tags = useMemo(() => [...new Set(projects.flatMap((p) => p.tags))].sort(), [projects])
@@ -99,35 +101,38 @@ export function Sidebar({
         <span className="my-1.5 h-px w-6 bg-line" />
         <button
           className={railBtnClass(isActive({ kind: 'all' }))}
-          title={`全部项目（${projects.length}）`}
+          title={t('app.allProjectsTooltip', { n: projects.length })}
           onClick={() => onViewChange({ kind: 'all' })}
         >
           <LayoutGrid size={16} />
         </button>
         <button
           className={railBtnClass(isActive({ kind: 'favorites' }))}
-          title="收藏"
+          title={t('app.favorites')}
           onClick={() => onViewChange({ kind: 'favorites' })}
         >
           <Star size={16} />
         </button>
         <button
           className={railBtnClass(isActive({ kind: 'recent' }))}
-          title="最近启动"
+          title={t('app.recent')}
           onClick={() => onViewChange({ kind: 'recent' })}
         >
           <FolderOpen size={16} />
         </button>
         <span className="flex-1" />
         {runningCount > 0 && (
-          <span className="mb-1 text-center text-[10px] leading-tight text-ok" title={`${runningCount} 个服务运行中`}>
+          <span
+            className="mb-1 text-center text-[10px] leading-tight text-ok"
+            title={t('app.runningCount', { n: runningCount })}
+          >
             ●
           </span>
         )}
-        <button className={railBtnClass(false)} title="设置" onClick={onSettings}>
+        <button className={railBtnClass(false)} title={t('app.settings')} onClick={onSettings}>
           <Settings size={16} />
         </button>
-        <button className={railBtnClass(false)} title="展开侧栏" onClick={onToggleCollapse}>
+        <button className={railBtnClass(false)} title={t('app.expandSidebar')} onClick={onToggleCollapse}>
           <PanelLeftOpen size={16} />
         </button>
       </aside>
@@ -156,12 +161,12 @@ export function Sidebar({
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-semibold leading-none text-ink">DevHub</div>
           <div className="mt-0.5 truncate text-[11px] text-subtle">
-            {runningCount > 0 ? `${runningCount} 个服务运行中` : '本地项目启动器'}
+            {runningCount > 0 ? t('app.runningCount', { n: runningCount }) : t('app.tagline')}
           </div>
         </div>
         <button
           className="grid h-6 w-6 shrink-0 place-items-center rounded text-subtle hover:bg-surface2 hover:text-ink"
-          title="收起侧栏"
+          title={t('app.collapseSidebar')}
           onClick={onToggleCollapse}
         >
           <PanelLeftClose size={15} />
@@ -182,12 +187,12 @@ export function Sidebar({
               onClick={() => onViewChange({ kind: 'all' })}
             >
               <LayoutGrid size={15} />
-              <span className="flex-1 truncate">全部项目</span>
+              <span className="flex-1 truncate">{t('app.allProjects')}</span>
               <span className="text-[11px] text-subtle">{projects.length}</span>
             </button>
             <button
               className="mr-1 grid h-5 w-5 shrink-0 place-items-center rounded text-subtle hover:bg-surface2 hover:text-ink"
-              title={treeOpen ? '收起分组与项目' : '展开分组与项目'}
+              title={treeOpen ? t('app.collapseTree') : t('app.expandTree')}
               onClick={() => setTreeOpen((v) => !v)}
             >
               <ChevronRight size={13} className={`transition-transform ${treeOpen ? 'rotate-90' : ''}`} />
@@ -210,7 +215,7 @@ export function Sidebar({
                 </div>
               ))}
               {tree.loose.map(projectRow)}
-              {!projects.length && <div className="px-2 py-1 text-[11px] text-subtle">还没有项目</div>}
+              {!projects.length && <div className="px-2 py-1 text-[11px] text-subtle">{t('list.noProjects')}</div>}
             </div>
           )}
 
@@ -219,18 +224,20 @@ export function Sidebar({
             onClick={() => onViewChange({ kind: 'favorites' })}
           >
             <Star size={15} />
-            <span className="flex-1">收藏</span>
+            <span className="flex-1">{t('app.favorites')}</span>
             <span className="text-[11px] text-subtle">{projects.filter((p) => p.favorite).length}</span>
           </button>
           <button className={itemClass(isActive({ kind: 'recent' }))} onClick={() => onViewChange({ kind: 'recent' })}>
             <FolderOpen size={15} />
-            <span>最近启动</span>
+            <span>{t('app.recent')}</span>
           </button>
         </div>
 
         {tags.length > 0 && (
           <div>
-            <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-subtle">标签</div>
+            <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-subtle">
+              {t('app.tags')}
+            </div>
             <div className="flex flex-wrap gap-1 px-2">
               {tags.map((t) => (
                 <button
@@ -253,7 +260,7 @@ export function Sidebar({
       <div className="border-t border-line p-2">
         <button className={itemClass(false)} onClick={onSettings}>
           <Settings size={15} />
-          <span>设置</span>
+          <span>{t('app.settings')}</span>
         </button>
       </div>
     </aside>

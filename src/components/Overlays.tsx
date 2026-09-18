@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
 import { useStore } from '../lib/store'
+import { useT } from '../lib/i18n'
 import { Button, Modal } from './ui'
 
 export function Toasts() {
@@ -30,8 +31,9 @@ export function Toasts() {
 
 export function ConfirmDialog() {
   const { confirmRequest, resolveConfirm } = useStore()
+  const { t } = useT()
   if (!confirmRequest) return null
-  const { title, message, confirmText = '确定', cancelText = '取消', danger } = confirmRequest
+  const { title, message, confirmText = t('act.confirm'), cancelText = t('act.cancel'), danger } = confirmRequest
   const close = (value: boolean) => resolveConfirm(value)
   return (
     <Modal
